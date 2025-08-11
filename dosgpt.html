@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ChatGPT DOS Terminal</title>
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    height: 100%;
+    background: black;
+    color: #00FF00;
+    font-family: monospace;
+    overflow: hidden;
+  }
+  #terminal {
+    box-sizing: border-box;
+    padding: 10px;
+    height: 100%;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+  #input-line {
+    display: flex;
+  }
+  #prompt {
+    user-select: none;
+  }
+  #cmdline {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #00FF00;
+    font-family: monospace;
+    font-size: 1em;
+    flex-grow: 1;
+  }
+</style>
+</head>
+<body>
+<div id="terminal"></div>
+<script>
+  const terminal = document.getElementById('terminal');
+  const PROMPT = 'C:\\>';
+
+  let inputLine, cmdLine;
+
+  // Initialize terminal with prompt line
+  function newPrompt() {
+    inputLine = document.createElement('div');
+    inputLine.id = 'input-line';
+    inputLine.innerHTML = `<span id="prompt">${PROMPT} </span>`;
+    cmdLine = document.createElement('input');
+    cmdLine.type = 'text';
+    cmdLine.id = 'cmdline';
+    cmdLine.autocomplete = 'off';
+    inputLine.appendChild(cmdLine);
+    terminal.appendChild(inputLine);
+    cmdLine.focus();
+    terminal.scrollTop = terminal.scrollHeight;
+
+    cmdLine.addEventListener('keydown', handleInput);
+  }
+
+  // Handle Enter key
+  async function handleInput(e) {
+    if (e.key === 'Enter') {
+      const command = cmdLine.value.trim();
+      cmdLine.removeEventListener('keydown', handleInput);
+      cmdLine.disabled = true;
+
+      // Show entered command as text (remove input)
+      inputLine.removeChild(cmdLine);
+      const cmdText = document.createElement('span');
+      cmdText.textContent = command;
+      inputLine.appendChild(cmdText);
+
+      // Send command to ChatGPT and print response
+      printText('...thinking...');
+      try {
+        const response = await sendToChatGPT(command);
+        printText(response);
+      } catch (err) {
+        printText('Error: ' + err.message);
+      }
+
+      newPrompt();
+    }
+  }
+
+  // Print text to terminal
+  function printText(text) {
+    const pre = document.createElement('pre');
+    pre.textContent = text;
+    terminal.appendChild(pre);
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
+  // Send prompt to OpenAI Chat API
+  async function sendToChatGPT(prompt) {
+    // IMPORTANT: Replace 'YOUR_API_KEY_HERE' with your real OpenAI API key.
+    // Do NOT expose your API key on a public site in production!
+    const API_KEY = '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';
+
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        max_tokens: 200,
+      })
+    });
+
+    if (!res.ok) {
+      throw new Error(`OpenAI API error: ${res.statusText}`);
+    }
+    const data = await res.json();
+    return data.choices[0].message.content.trim();
+  }
+
+  // Start terminal
+  printText('dosGPT Terminal\nType anything and press Enter to ask ChatGPT.\n');
+  newPrompt();
+</script>
+</body>
+</html>
